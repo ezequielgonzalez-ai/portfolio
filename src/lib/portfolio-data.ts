@@ -75,13 +75,20 @@ export const personalInfo = {
 };
 
 // ============================================
-// NAVIGATION
+// NAVIGATION - Multipage Architecture
 // ============================================
 export const navLinks = [
+  { label: "Inicio", href: "/", isPage: true },
+  { label: "Servicios", href: "/servicios", isPage: true },
+  { label: "Contacto", href: "/contacto", isPage: true },
+] as const;
+
+// Home page sections (for scroll navigation)
+export const homeSections = [
   { label: "Inicio", href: "#inicio" },
   { label: "Servicios", href: "#servicios" },
-  { label: "Proyectos IA", href: "#proyectos" },
-  { label: "Stack IA", href: "#stack" },
+  { label: "Proyectos", href: "#proyectos" },
+  { label: "Stack", href: "#stack" },
   { label: "Contacto", href: "#contacto" },
 ] as const;
 

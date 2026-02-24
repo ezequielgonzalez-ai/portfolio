@@ -1,56 +1,75 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
-import { Menu, X, Sparkles, Zap } from "lucide-react";
-import { siteConfig, navLinks } from "@/lib/portfolio-data";
+import { Menu, X, Zap } from "lucide-react";
+import { siteConfig, navLinks, homeSections } from "@/lib/portfolio-data";
 import { LanguageSwitcher } from "./language-switcher";
 import { cn } from "@/lib/utils";
 
 /**
  * ============================================================
- * NAVBAR CRO-OPTIMIZADO
+ * NAVBAR CRO-OPTIMIZADO - MULTIPAGE ARCHITECTURE
  * ============================================================
  * 
  * Características:
  * - Transparente al inicio, sólido al scroll
+ * - Navegación multipage (Home, Servicios, Contacto)
+ * - Scroll sections en Home page
  * - CTA siempre visible
  * - Animaciones sutiles
- * - Layout persistente
  */
 
 export function Navigation() {
+  const pathname = usePathname();
   const [activeSection, setActiveSection] = useState("inicio");
   const [isScrolled, setIsScrolled] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+
+  const isHomePage = pathname === "/";
 
   useEffect(() => {
     const handleScroll = () => {
       setIsScrolled(window.scrollY > 50);
 
-      // Detect active section
-      const sections = navLinks.map((link) => link.href.replace("#", ""));
-      for (const section of sections.reverse()) {
-        const element = document.getElementById(section);
-        if (element) {
-          const rect = element.getBoundingClientRect();
-          if (rect.top <= 150) {
-            setActiveSection(section);
-            break;
+      // Solo detectar secciones en Home page
+      if (isHomePage) {
+        const sections = homeSections.map((link) => link.href.replace("#", ""));
+        for (const section of sections.reverse()) {
+          const element = document.getElementById(section);
+          if (element) {
+            const rect = element.getBoundingClientRect();
+            if (rect.top <= 150) {
+              setActiveSection(section);
+              break;
+            }
           }
         }
       }
     };
 
     window.addEventListener("scroll", handleScroll);
+    handleScroll(); // Check initial state
     return () => window.removeEventListener("scroll", handleScroll);
-  }, []);
+  }, [isHomePage]);
 
   const scrollToSection = (href: string) => {
     const element = document.querySelector(href);
     if (element) {
       element.scrollIntoView({ behavior: "smooth" });
+    }
+    setIsMobileMenuOpen(false);
+  };
+
+  const handleNavClick = (href: string, isPage: boolean) => {
+    if (isPage && href !== "/" && isHomePage) {
+      // Navigate to other page
+      setIsMobileMenuOpen(false);
+    } else if (!isPage && href.startsWith("#")) {
+      // Scroll to section on home page
+      scrollToSection(href);
     }
     setIsMobileMenuOpen(false);
   };
@@ -97,18 +116,16 @@ export function Navigation() {
 
         {/* Desktop Navigation */}
         <div className="hidden md:flex items-center gap-6">
-          {navLinks.slice(0, 4).map((link) => {
-            const isActive = activeSection === link.href.replace("#", "");
+          {navLinks.map((link) => {
+            const isActive = link.isPage 
+              ? (link.href === "/" ? isHomePage : pathname === link.href)
+              : (isHomePage && activeSection === link.href.replace("#", ""));
+            
             return (
               <Link
                 key={link.href}
                 href={link.href}
-                onClick={(e) => {
-                  if (link.href.startsWith("#")) {
-                    e.preventDefault();
-                    scrollToSection(link.href);
-                  }
-                }}
+                onClick={() => handleNavClick(link.href, link.isPage)}
                 className={cn(
                   "text-sm font-medium transition-colors relative",
                   isActive ? "text-white" : "text-white/60 hover:text-white"
@@ -133,15 +150,33 @@ export function Navigation() {
             <LanguageSwitcher />
           </div>
 
-          {/* CTA Button */}
+          {/* CTA Button with Border Glow */}
           <Link href="/contacto">
             <motion.button
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
-              className="hidden sm:flex items-center gap-2 px-5 py-2.5 rounded-xl bg-gradient-to-r from-violet-600 to-cyan-600 text-white text-sm font-medium shadow-lg shadow-violet-500/25 hover:shadow-violet-500/40 transition-shadow"
+              className="relative group hidden sm:flex items-center gap-2 px-5 py-2.5 rounded-xl bg-gradient-to-r from-violet-600 to-cyan-600 text-white text-sm font-medium shadow-lg shadow-violet-500/25 overflow-hidden"
             >
-              <Zap className="w-4 h-4" />
-              <span>Consulta Gratis</span>
+              {/* Animated border glow */}
+              <div className="absolute inset-0 rounded-xl overflow-hidden">
+                <div className="absolute inset-0 rounded-xl border border-white/20" />
+                <motion.div
+                  className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity"
+                  style={{
+                    background: "linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent)",
+                  }}
+                  animate={{
+                    x: ["-100%", "200%"],
+                  }}
+                  transition={{
+                    duration: 1.5,
+                    repeat: Infinity,
+                    ease: "linear",
+                  }}
+                />
+              </div>
+              <Zap className="w-4 h-4 relative z-10" />
+              <span className="relative z-10">Consulta Gratis</span>
             </motion.button>
           </Link>
 
@@ -171,21 +206,27 @@ export function Navigation() {
             className="md:hidden fixed inset-x-4 top-20 z-40 bg-[#0a0a0a]/95 backdrop-blur-xl border border-white/10 rounded-2xl shadow-2xl overflow-hidden"
           >
             <div className="p-4 space-y-1">
-              {navLinks.map((link) => (
-                <Link
-                  key={link.href}
-                  href={link.href}
-                  onClick={(e) => {
-                    if (link.href.startsWith("#")) {
-                      e.preventDefault();
-                      scrollToSection(link.href);
-                    }
-                  }}
-                  className="block px-4 py-3 rounded-xl text-white/70 hover:text-white hover:bg-white/5 transition-colors"
-                >
-                  {link.label}
-                </Link>
-              ))}
+              {navLinks.map((link) => {
+                const isActive = link.isPage 
+                  ? (link.href === "/" ? isHomePage : pathname === link.href)
+                  : (isHomePage && activeSection === link.href.replace("#", ""));
+                
+                return (
+                  <Link
+                    key={link.href}
+                    href={link.href}
+                    onClick={() => handleNavClick(link.href, link.isPage)}
+                    className={cn(
+                      "block px-4 py-3 rounded-xl transition-colors",
+                      isActive 
+                        ? "text-white bg-white/5" 
+                        : "text-white/70 hover:text-white hover:bg-white/5"
+                    )}
+                  >
+                    {link.label}
+                  </Link>
+                );
+              })}
             </div>
             <div className="p-4 border-t border-white/10">
               <Link href="/contacto" className="block">
